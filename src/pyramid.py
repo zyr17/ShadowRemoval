@@ -1,7 +1,10 @@
 import cv2
 
 def RemoveShadow(originalpng, shadowpng): # get gray image
-	
+	shadownum = []
+	illunum = []
+	for i, j, num in enumerate(originalpng):
+		
 
 img = cv2.imread('../data/test.jpg',0) #
 img1 = cv2.pyrDown(img)#
