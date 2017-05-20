@@ -5,34 +5,24 @@ FourNear = [[1,0],[-1,0],[0,1],[0,-1]]
 ShadowGroundTruth = 128
 
 
-def RemoveOneShadow(originalpng, shadowpng, illupng): # get gray image
+def RemoveOneShadow(originalpng, shadowlist, illustd, illumean): # get gray image
 	shadownum = []
-	illunum = []
-	for (i, j), num in np.ndenumerate(originalpng):
-		if shadowpng[i][j] > ShadowGroundTruth:
-			#shadow
-			shadownum.append(originalpng[i][j])
-		if illupng[i][j] != 0:
-			illunum.append(originalpng[i][j])
+	for [i, j] in shadowlist:
+		shadownum.append(originalpng[i][j])
 	shadowstd = np.std(shadownum)
-	illustd = np.std(illunum)
 	lamida = illustd / shadowstd
-	alpha = np.mean(illunum) - lamida * np.mean(shadownum)
-	res = copy.deepcopy(originalpng)
-	for (i, j), num in np.ndenumerate(originalpng):
-		if shadowpng[i][j] > ShadowGroundTruth:
-			#shadow
-			#temp = np.uint8(res[i][j])
-			temp = np.int32(res[i][j])
-			temp = alpha + lamida * temp
-			
-			if temp > 255:
-				temp = 255
-			if temp < 0:
-				temp = 0
-			
-			res[i][j] = np.uint8(temp)
-	return res
+	alpha = illumean - lamida * np.mean(shadownum)
+	for [i, j] in shadowlist:
+		#temp = np.uint8(originalpng[i][j])
+		temp = np.int32(originalpng[i][j])
+		temp = alpha + lamida * temp
+		
+		if temp > 255:
+			temp = 255
+		if temp < 0:
+			temp = 0
+		
+		originalpng[i][j] = np.uint8(temp)
 
 def GenerateOneShadow(stx, sty):
 	l = [[stx, sty]]
@@ -72,30 +62,25 @@ def DirectShadowRemoval(testdataset, testimgname, savepath, resultname):
 	for i in xrange(illuimg.shape[0]):
 		for j in xrange(illuimg.shape[1]):
 			illuimg[i][j] = 255 - illuimg[i][j]
+	illunum = []
+	for (i, j), num in np.ndenumerate(illuimg):
+		if num > ShadowGroundTruth:
+			illunum.append(img[i][j])
+	illustd = np.std(illunum)
+	illumean = np.mean(illunum)
 	shadows = []
 	for (i, j), num in np.ndenumerate(shadowimg):
 		if shadowimg[i][j] > ShadowGroundTruth:
 			oneshadowimg = GenerateOneShadow(i, j)
 			shadows.append(oneshadowimg)
 			#cv2.imwrite('subshadow' + str(len(shadows)) + '.png', oneshadowimg)
-
-	'''
-	img1 = cv2.pyrDown(img)
-	temp_img1 = cv2.pyrDown(img1)
-	temp = cv2.pyrUp(temp_img1)
-	print img1
-	print temp
-	img2 = img1 - temp
-	for i in xrange(168):
-		for j in xrange(img2[i].size):
-			img2[i][j] += 128
-	print img2
-	#cv2.imwrite('lpls.png', img2)
-	'''
-
 	cv2.imwrite(savepath + 'ori.png', img)
 	for i in shadows:
-		img = RemoveOneShadow(img, i, illuimg)
+		shadowlist = []
+		for (x, y), num in np.ndenumerate(i):
+			if num > ShadowGroundTruth:
+				shadowlist.append([x, y])
+		RemoveOneShadow(img, shadowlist, illustd, illumean)
 	cv2.imwrite(savepath + resultname + '.png', img)
 	#cv2.imwrite('shadowremoval.png', RemoveShadow(img, shadowimg))
 	
@@ -116,6 +101,12 @@ def PyramidShadowRemoval(testdataset, testimgname, savepath, resultname, pyramid
 	for i in xrange(illuimg.shape[0]):
 		for j in xrange(illuimg.shape[1]):
 			illuimg[i][j] = 255 - illuimg[i][j]
+	illunum = []
+	for (i, j), num in np.ndenumerate(illuimg):
+		if num > ShadowGroundTruth:
+			illunum.append(img[i][j])
+	illustd = np.std(illunum)
+	illumean = np.mean(illunum)
 	shadows = []
 	for (i, j), num in np.ndenumerate(shadowimg):
 		if shadowimg[i][j] > ShadowGroundTruth:
@@ -137,8 +128,12 @@ def PyramidShadowRemoval(testdataset, testimgname, savepath, resultname, pyramid
 	cv2.imwrite('pyramid' + str(pyramidnumber) + '.png', img)
 	pyramidpic.append(img)
 	for shadow in shadows:
-		for i in xrange(len(pyramidpic)):
-			pyramidpic[i] = RemoveOneShadow(pyramidpic[i], shadow, illuimg)
+		for i in xrange(len(pyramidpic)):		
+			shadowlist = []
+			for (x, y), num in np.ndenumerate(shadow):
+				if num > ShadowGroundTruth:
+					shadowlist.append([x, y])
+			RemoveOneShadow(pyramidpic[i], shadowlist, illustd, illumean)
 			cv2.imwrite('pyramid' + str(i) + 'res.png', pyramidpic[i])
 			shadow = cv2.pyrDown(shadow)
 			#shadow = np.delete(shadow, np.s_[1::2], 0)
@@ -168,7 +163,9 @@ if __name__ == '__main__':
 	testdataset = 'SBU'
 	filename = [re.sub(r'\.jpg', '', x) for x in os.listdir('../data/' + testdataset + '/original')]
 	#print filename
-	for i in xrange(1, 2):
+	for i in xrange(0, 10):
 		print 'do', i
 		DirectShadowRemoval(testdataset, filename[i], './results/', str(i))
 		PyramidShadowRemoval(testdataset, filename[i], './results/', str(i), 2)
+		print 'done', i
+		raw_input()
