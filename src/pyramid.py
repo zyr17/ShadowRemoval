@@ -101,12 +101,6 @@ def PyramidShadowRemoval(testdataset, testimgname, savepath, resultname, pyramid
 	for i in xrange(illuimg.shape[0]):
 		for j in xrange(illuimg.shape[1]):
 			illuimg[i][j] = 255 - illuimg[i][j]
-	illunum = []
-	for (i, j), num in np.ndenumerate(illuimg):
-		if num > ShadowGroundTruth:
-			illunum.append(img[i][j])
-	illustd = np.std(illunum)
-	illumean = np.mean(illunum)
 	shadows = []
 	for (i, j), num in np.ndenumerate(shadowimg):
 		if shadowimg[i][j] > ShadowGroundTruth:
@@ -127,13 +121,25 @@ def PyramidShadowRemoval(testdataset, testimgname, savepath, resultname, pyramid
 		img = tempimg
 	cv2.imwrite('pyramid' + str(pyramidnumber) + '.png', img)
 	pyramidpic.append(img)
+	illustds = []
+	illumeans = []
+	for T in xrange(len(pyramidpic)):
+		illunum = []
+		for (i, j), num in np.ndenumerate(illuimg):
+			if num > ShadowGroundTruth:
+				illunum.append(pyramidpic[T][i][j])
+		illustds.append(np.std(illunum))
+		illumeans.append(np.mean(illunum))
+		illuimg = cv2.pyrDown(illuimg)
+	
+	
 	for shadow in shadows:
 		for i in xrange(len(pyramidpic)):		
 			shadowlist = []
 			for (x, y), num in np.ndenumerate(shadow):
 				if num > ShadowGroundTruth:
 					shadowlist.append([x, y])
-			RemoveOneShadow(pyramidpic[i], shadowlist, illustd, illumean)
+			RemoveOneShadow(pyramidpic[i], shadowlist, illustds[i], illumeans[i])
 			cv2.imwrite('pyramid' + str(i) + 'res.png', pyramidpic[i])
 			shadow = cv2.pyrDown(shadow)
 			#shadow = np.delete(shadow, np.s_[1::2], 0)
@@ -165,7 +171,7 @@ if __name__ == '__main__':
 	#print filename
 	for i in xrange(0, 10):
 		print 'do', i
-		DirectShadowRemoval(testdataset, filename[i], './results/', str(i))
+		#DirectShadowRemoval(testdataset, filename[i], './results/', str(i))
 		PyramidShadowRemoval(testdataset, filename[i], './results/', str(i), 2)
 		print 'done', i
 		raw_input()
