@@ -5,11 +5,15 @@ FourNear = [[1,0],[-1,0],[0,1],[0,-1]]
 ShadowGroundTruth = 128
 
 
-def RemoveOneShadow(originalpng, shadowlist, illustd, illumean): # get gray image
+def RemoveShadowStrip(originalpng, shadowlist, illustd, illumean): # get gray image
+	if shadowlist == None or len(shadowlist) == 0:
+		return
 	shadownum = []
 	for [i, j] in shadowlist:
 		shadownum.append(originalpng[i][j])
 	shadowstd = np.std(shadownum)
+	if shadowstd == 0:
+		return
 	lamida = illustd / shadowstd
 	alpha = illumean - lamida * np.mean(shadownum)
 	for [i, j] in shadowlist:
@@ -21,8 +25,49 @@ def RemoveOneShadow(originalpng, shadowlist, illustd, illumean): # get gray imag
 			temp = 255
 		if temp < 0:
 			temp = 0
-		
 		originalpng[i][j] = np.uint8(temp)
+
+def RemoveOneShadow(originalpng, shadowlist, illustd, illumean, thickness = 10000):
+	#if thickness == 10000:
+	#	RemoveShadowStrip(originalpng, shadowlist, illustd, illumean)
+	#	return
+	shadow = originalpng.astype(int)
+	for i in xrange(shadow.shape[0]):
+		for j in xrange(shadow.shape[1]):
+			shadow[i][j] = - 1
+	for [i, j] in shadowlist:
+		shadow[i][j] = 0
+	striplist = [[], []]
+	for [i, j] in shadowlist:
+		flag = False
+		for [x, y] in FourNear:
+			x += i
+			y += j
+			if x >= 0 and y >= 0 and x < shadow.shape[0] and y < shadow.shape[1]:
+				if shadow[x][y] == - 1:
+					flag = True
+		if flag:
+			shadow[i][j] = 1
+			striplist[1].append([i, j])
+	nowstrip = 1
+	while len(striplist[nowstrip]) > 0:
+		templist = []
+		for [i, j] in striplist[nowstrip]:
+			for [x, y] in FourNear:
+				x += i
+				y += j
+				if x >= 0 and y >= 0 and x < shadow.shape[0] and y < shadow.shape[1]:
+					if shadow[x][y] == 0:
+						shadow[x][y] = nowstrip + 1
+						templist.append([x, y])
+		striplist.append(templist)
+		nowstrip += 1
+	nowstrip = 0
+	while nowstrip < len(striplist):
+		for i in xrange(nowstrip + 1, min(len(striplist), nowstrip + thickness)):
+			striplist[nowstrip] += striplist[i]
+		RemoveShadowStrip(originalpng, striplist[nowstrip], illustd, illumean)
+		nowstrip += thickness
 
 def GenerateOneShadow(stx, sty):
 	l = [[stx, sty]]
@@ -80,7 +125,7 @@ def DirectShadowRemoval(testdataset, testimgname, savepath, resultname):
 		for (x, y), num in np.ndenumerate(i):
 			if num > ShadowGroundTruth:
 				shadowlist.append([x, y])
-		RemoveOneShadow(img, shadowlist, illustd, illumean)
+		RemoveOneShadow(img, shadowlist, illustd, illumean, 2)
 	cv2.imwrite(savepath + resultname + '.png', img)
 	#cv2.imwrite('shadowremoval.png', RemoveShadow(img, shadowimg))
 	
@@ -139,7 +184,10 @@ def PyramidShadowRemoval(testdataset, testimgname, savepath, resultname, pyramid
 			for (x, y), num in np.ndenumerate(shadow):
 				if num > ShadowGroundTruth:
 					shadowlist.append([x, y])
-			RemoveOneShadow(pyramidpic[i], shadowlist, illustds[i], illumeans[i])
+			if i == len(pyramidpic) - 1:
+				RemoveOneShadow(pyramidpic[i], shadowlist, illustds[i], illumeans[i], 1)
+			else:
+				RemoveOneShadow(pyramidpic[i], shadowlist, illustds[i], illumeans[i])	
 			cv2.imwrite('pyramid' + str(i) + 'res.png', pyramidpic[i])
 			shadow = cv2.pyrDown(shadow)
 			#shadow = np.delete(shadow, np.s_[1::2], 0)
@@ -160,7 +208,6 @@ def PyramidShadowRemoval(testdataset, testimgname, savepath, resultname, pyramid
 		for y in xrange(img.shape[1]):
 			if orishadowimg[x][y] <= ShadowGroundTruth:
 				img[x][y] = oriimg[x][y]
-	
 	cv2.imwrite('pyramidres.png', img)
 
 if __name__ == '__main__':
