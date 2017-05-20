@@ -136,9 +136,13 @@ def PyramidShadowRemoval(testdataset, testimgname, savepath, resultname, pyramid
 		img = tempimg
 	cv2.imwrite('pyramid' + str(pyramidnumber) + '.png', img)
 	pyramidpic.append(img)
+	illuimgs = [illuimg]
+	for i in xrange(pyramidnumber):
+		illuimg = cv2.pyrDown(illuimg)
+		illuimgs.append(illuimg)
 	for shadow in shadows:
 		for i in xrange(len(pyramidpic)):
-			pyramidpic[i] = RemoveOneShadow(pyramidpic[i], shadow, illuimg)
+			pyramidpic[i] = RemoveOneShadow(pyramidpic[i], shadow, illuimgs[i])
 			cv2.imwrite('pyramid' + str(i) + 'res.png', pyramidpic[i])
 			shadow = cv2.pyrDown(shadow)
 			#shadow = np.delete(shadow, np.s_[1::2], 0)
@@ -168,7 +172,7 @@ if __name__ == '__main__':
 	testdataset = 'SBU'
 	filename = [re.sub(r'\.jpg', '', x) for x in os.listdir('../data/' + testdataset + '/original')]
 	#print filename
-	for i in xrange(1, 2):
+	for i in xrange(1):
 		print 'do', i
 		DirectShadowRemoval(testdataset, filename[i], './results/', str(i))
 		PyramidShadowRemoval(testdataset, filename[i], './results/', str(i), 2)
