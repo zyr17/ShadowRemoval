@@ -112,7 +112,18 @@ def GenerateOneShadow(stx, sty):
 				if shadowimg[X - x * (MaxBorder - MinBorder)][Y - y * (MaxBorder - MinBorder)] > ShadowGroundTruth:
 					continue
 				oneilluimg[X][Y] = 255
-	
+	OutBorder = 3
+	changelist = []
+	for (i, j), num in np.ndenumerate(oneshadowimg):
+		if num > ShadowGroundTruth:
+			for x, y in FourNear:
+				X = x * OutBorder + i
+				Y = y * OutBorder + j
+				if X < 0 or Y < 0 or X >= shadowimg.shape[0] or Y >= shadowimg.shape[1]:
+					continue
+				changelist.append([X, Y])
+	for i, j in changelist:
+		oneshadowimg[i][j] = 255
 	return oneshadowimg, oneilluimg
 	
 def PyramidShadowRemovalBlack(img, inputshadowimg, pyramidnumber):
@@ -187,14 +198,16 @@ def PyramidShadowRemovalBlack(img, inputshadowimg, pyramidnumber):
 			for y in xrange(pyramidpic[i].shape[1]):
 				pyramidpic[i][x][y] += 128
 		img += pyramidpic[i]
-	
+	'''
 	#replace all pixel which not in shadow by original pixel, to remove highlight around shadow
 	for x in xrange(img.shape[0]):
 		for y in xrange(img.shape[1]):
 			if orishadowimg[x][y] <= ShadowGroundTruth:
 				img[x][y] = oriimg[x][y]
+	'''
+	return img
 
-def PyramidShadowRemovalColor(testdataset, testimgname, savepath, resultname, pyramidnumber):
+def PyramidShadowRemovalColor(testdataset, testimgname, resultname, pyramidnumber):
 	#colorimg = cv2.imread('../data/' + testdataset + '/original/' + testimgname + '.jpg', 0)
 	inputshadowimg = cv2.imread('../data/' + testdataset + '/groundtruth/' + testimgname + '.png', 0)
 	
@@ -202,16 +215,32 @@ def PyramidShadowRemovalColor(testdataset, testimgname, savepath, resultname, py
 	color0img = np.delete(colorimg, [1, 2], 2).reshape((colorimg.shape[0], colorimg.shape[1]))
 	color1img = np.delete(colorimg, [0, 2], 2).reshape((colorimg.shape[0], colorimg.shape[1]))
 	color2img = np.delete(colorimg, [0, 1], 2).reshape((colorimg.shape[0], colorimg.shape[1]))
-	PyramidShadowRemovalBlack(color0img, copy.deepcopy(inputshadowimg), pyramidnumber)
-	PyramidShadowRemovalBlack(color1img, copy.deepcopy(inputshadowimg), pyramidnumber)
-	PyramidShadowRemovalBlack(color2img, copy.deepcopy(inputshadowimg), pyramidnumber)
+	color0img = PyramidShadowRemovalBlack(color0img, copy.deepcopy(inputshadowimg), pyramidnumber)
+	color1img = PyramidShadowRemovalBlack(color1img, copy.deepcopy(inputshadowimg), pyramidnumber)
+	color2img = PyramidShadowRemovalBlack(color2img, copy.deepcopy(inputshadowimg), pyramidnumber)
 	for i in xrange(colorimg.shape[0]):
 		for j in xrange(colorimg.shape[1]):
 			colorimg[i][j] = [color0img[i][j], color1img[i][j], color2img[i][j]]
-	cv2.imwrite(savepath + resultname + ' - ' + testimgname + '.png', colorimg)
+	cv2.imwrite(resultname + ' - ' + testimgname + '.png', colorimg)
 	'''
 	PyramidShadowRemovalBlack(colorimg, copy.deepcopy(inputshadowimg), pyramidnumber)
-	cv2.imwrite(savepath + resultname + ' - ' + testimgname + '.png', colorimg)
+	cv2.imwrite(resultname + ' - ' + testimgname + '.png', colorimg)
+	'''
+
+def PyramidShadowRemovalColor(colorimg, inputshadowimg, testimgname, resultname, pyramidnumber):
+	color0img = np.delete(colorimg, [1, 2], 2).reshape((colorimg.shape[0], colorimg.shape[1]))
+	color1img = np.delete(colorimg, [0, 2], 2).reshape((colorimg.shape[0], colorimg.shape[1]))
+	color2img = np.delete(colorimg, [0, 1], 2).reshape((colorimg.shape[0], colorimg.shape[1]))
+	color0img = PyramidShadowRemovalBlack(color0img, copy.deepcopy(inputshadowimg), pyramidnumber)
+	color1img = PyramidShadowRemovalBlack(color1img, copy.deepcopy(inputshadowimg), pyramidnumber)
+	color2img = PyramidShadowRemovalBlack(color2img, copy.deepcopy(inputshadowimg), pyramidnumber)
+	for i in xrange(colorimg.shape[0]):
+		for j in xrange(colorimg.shape[1]):
+			colorimg[i][j] = [color0img[i][j], color1img[i][j], color2img[i][j]]
+	cv2.imwrite(resultname + ' - ' + testimgname + '.png', colorimg)
+	'''
+	PyramidShadowRemovalBlack(colorimg, copy.deepcopy(inputshadowimg), pyramidnumber)
+	cv2.imwrite(resultname + ' - ' + testimgname + '.png', colorimg)
 	'''
 
 if __name__ == '__main__':
@@ -222,7 +251,6 @@ if __name__ == '__main__':
 	#print filename
 	for i in xrange(0, 10):
 		print 'do', i
-		PyramidShadowRemovalColor(testdataset, filename[i], './results/', str(i), 0)
-		#PyramidShadowRemovalColor(testdataset, filename[i], './', str(i), 2)
+		PyramidShadowRemovalColor(testdataset, filename[i], './results/' + str(i), 0)
+		#PyramidShadowRemovalColor(testdataset, filename[i], './' + str(i), 2)
 		print 'done', i
-		raw_input()
