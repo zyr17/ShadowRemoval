@@ -73,7 +73,7 @@ def RemoveOneShadow(originalpng, shadowlist, illustd, illumean, thickness = 1000
 			RemoveShadowStrip(originalpng, striplist[nowstrip], illustd, illumean)
 			nowstrip += thickness
 	else:
-		MINLENGTH = 200
+		MINLENGTH = 2000000
 		SEGMENTS = 3
 		for nowstrip in striplist:
 			maxlength = max(MINLENGTH, len(nowstrip) / SEGMENTS)
@@ -262,7 +262,7 @@ def PyramidShadowRemovalColor(testdataset, testimgname, resultname, pyramidnumbe
 	cv2.imwrite(resultname + ' - ' + testimgname + '.png', colorimg)
 	'''
 
-def PyramidShadowRemovalColorByImg(colorimg, inputshadowimg, testimgname, resultname, pyramidnumber):
+def PyramidShadowRemovalColorByImg(colorimg, inputshadowimg, pyramidnumber):
 	color0img = np.delete(colorimg, [1, 2], 2).reshape((colorimg.shape[0], colorimg.shape[1]))
 	color1img = np.delete(colorimg, [0, 2], 2).reshape((colorimg.shape[0], colorimg.shape[1]))
 	color2img = np.delete(colorimg, [0, 1], 2).reshape((colorimg.shape[0], colorimg.shape[1]))
@@ -272,7 +272,6 @@ def PyramidShadowRemovalColorByImg(colorimg, inputshadowimg, testimgname, result
 	for i in xrange(colorimg.shape[0]):
 		for j in xrange(colorimg.shape[1]):
 			colorimg[i][j] = [color0img[i][j], color1img[i][j], color2img[i][j]]
-	cv2.imwrite(resultname + ' - ' + testimgname + '.png', colorimg)
 	'''
 	PyramidShadowRemovalBlack(colorimg, copy.deepcopy(inputshadowimg), pyramidnumber)
 	cv2.imwrite(resultname + ' - ' + testimgname + '.png', colorimg)

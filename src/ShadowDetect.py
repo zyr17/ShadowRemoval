@@ -159,7 +159,7 @@ def DcmpMean(a, b):
 		return -1
 	return 0
 
-def FloodFill(img, mask, seedpoint, newval, thredhold):
+def FloodFill(img, mask, seedpoint, newval, threshold):
 	l = [seedpoint]
 	t = 0
 	n = img.shape[0]
@@ -174,8 +174,8 @@ def FloodFill(img, mask, seedpoint, newval, thredhold):
 			y += j
 			if x < 0 or x >= n or y < 0 or y >= m:
 				continue
-			#print img[x][y], np.mean(img[x][y]), thredhold
-			if DCmpAll3(img[x][y], thredhold) != -1:
+			#print img[x][y], np.mean(img[x][y]), threshold
+			if DCmpAll3(img[x][y], threshold) != -1:
 				continue
 			if res[x][y] != 0:
 				continue
@@ -316,7 +316,8 @@ def ShadowDetect(img):
 			#raw_input()
 	#img[shadowres != 0] = [255, 255, 255]
 	#img[shadowres == 255] = [255, 0, 0]
-	#RemoveSmall(shadowres)
+	RemoveSmall(shadowres)
+	#CatInside(shadowres)
 	return shadowres
 
 if __name__ == '__main__':
