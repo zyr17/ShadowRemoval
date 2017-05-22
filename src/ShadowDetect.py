@@ -51,7 +51,7 @@ def WaterShed(inputimg):
 	img[markers == -1] = [255,0,0]
 	return img, markers
 
-def ShadowDetect(img):
+def BlockShadowDetect(img):
 	M = 1.31
 	N = 1.19
 	K1 = 0.8
@@ -220,7 +220,50 @@ def CatInside(img):
 		t += 1
 	img[img == NOTSHADOW] = SHADOW
 	img[img == TEMPCOLOR] = NOTSHADOW
-	
+
+def RemoveSmall(img):
+	#TODO remove small pieces of shadow and non-shadow places
+	return
+
+def ShadowDetect(img):
+	shadowres, shadowmeans, nsmeans = BlockShadowDetect(img)
+	tmpmeans = np.mean(np.array([x for x in shadowmeans if x is not None]))
+	if tmpmeans is None:
+		return None
+	#print tmpmeans
+	for j in xrange(len(shadowmeans)):
+		if shadowmeans[j] is not None and np.mean(shadowmeans[j]) > tmpmeans:
+			#print j
+			shadowres[shadowres == j] = 255
+	floodfillmask = np.zeros((img.shape[0] + 2) * (img.shape[1] + 2)).reshape((img.shape[0] + 2, img.shape[1] + 2)).astype('uint8')
+	ONEDIFF = 15
+	FLOODDIFF = (ONEDIFF, ONEDIFF, ONEDIFF)
+	nsmean = np.mean(np.array([x for x in nsmeans if x is not None]), axis = 0)
+	shadowmean = np.mean(np.array([x for x in shadowmeans if x is not None]), axis = 0)
+	#print nsmean, shadowmean
+	floodpos = [[0, 0, 0, (nsmean - shadowmean) * 0.5 + shadowmean] for x in xrange(len(shadowmeans))]
+	for i in xrange(img.shape[0]):
+		for j in xrange(img.shape[1]):
+			if shadowres[i][j] != 0 and shadowres[i][j] != 255 and (shadowmeans[shadowres[i][j]] is not None):
+				floodpos[shadowres[i][j]][0] += i
+				floodpos[shadowres[i][j]][1] += j
+				floodpos[shadowres[i][j]][2] += 1
+	shadowres[:][:] = 0
+	for i in floodpos:
+		if i[2] != 0:
+			x = i[0] / i[2]
+			y = i[1] / i[2]
+			if shadowres[x][y] == 255:
+				continue
+			FloodFill(img, shadowres, (x, y), 255, i[3])
+			#print x, y#, img[x][y]
+			#cv2.imwrite('shadowres.png', img)
+			#raw_input()
+	#img[shadowres != 0] = [255, 255, 255]
+	#img[shadowres == 255] = [255, 0, 0]
+	CatInside(shadowres)
+	return shadowres
+
 if __name__ == '__main__':
 	import os
 	import re
@@ -230,44 +273,10 @@ if __name__ == '__main__':
 	for T in xrange(0, len(filename)):
 		img = cv2.imread('../data/' + testdataset + '/original/' + filename[T] + '.jpg')
 		cv2.imwrite('ori.png', img)
-		shadowres, shadowmeans, nsmeans = ShadowDetect(img)
-		tmpmeans = np.mean(np.array([x for x in shadowmeans if x is not None]))
-		if tmpmeans is None:
+		shadowres = ShadowDetect(img)
+		if shadowres is None:
 			print 'not find shadow', T
-			#raw_input()
 			continue
-		#print tmpmeans
-		for j in xrange(len(shadowmeans)):
-			if shadowmeans[j] is not None and np.mean(shadowmeans[j]) > tmpmeans:
-				#print j
-				shadowres[shadowres == j] = 255
-		floodfillmask = np.zeros((img.shape[0] + 2) * (img.shape[1] + 2)).reshape((img.shape[0] + 2, img.shape[1] + 2)).astype('uint8')
-		ONEDIFF = 15
-		FLOODDIFF = (ONEDIFF, ONEDIFF, ONEDIFF)
-		nsmean = np.mean(np.array([x for x in nsmeans if x is not None]), axis = 0)
-		shadowmean = np.mean(np.array([x for x in shadowmeans if x is not None]), axis = 0)
-		#print nsmean, shadowmean
-		floodpos = [[0, 0, 0, (nsmean - shadowmean) * 0.5 + shadowmean] for x in xrange(len(shadowmeans))]
-		for i in xrange(img.shape[0]):
-			for j in xrange(img.shape[1]):
-				if shadowres[i][j] != 0 and shadowres[i][j] != 255 and (shadowmeans[shadowres[i][j]] is not None):
-					floodpos[shadowres[i][j]][0] += i
-					floodpos[shadowres[i][j]][1] += j
-					floodpos[shadowres[i][j]][2] += 1
-		shadowres[:][:] = 0
-		for i in floodpos:
-			if i[2] != 0:
-				x = i[0] / i[2]
-				y = i[1] / i[2]
-				if shadowres[x][y] == 255:
-					continue
-				FloodFill(img, shadowres, (x, y), 255, i[3])
-				#print x, y#, img[x][y]
-				#cv2.imwrite('shadowres.png', img)
-				#raw_input()
-		#img[shadowres != 0] = [255, 255, 255]
-		#img[shadowres == 255] = [255, 0, 0]
-		CatInside(shadowres)
 		img[shadowres == 255] = (255, 255, 255)
 		cv2.imwrite('./detectresults/' + str(T) + ' - ' + filename[T] + '.png', img)
 		print 'done', T
