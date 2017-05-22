@@ -56,9 +56,9 @@ def BlockShadowDetect(img):
 	N = 1.19
 	K1 = 0.8
 	K2 = 1.2
+	'''
 	logres = logres = LogConvert(img)
 	cv2.imwrite('conv.png', logres)
-	'''
 	wsres, marker = WaterShed(logres)
 	temp = copy.deepcopy(img)
 	temp[marker == -1] = [255, 0, 0]
@@ -223,7 +223,62 @@ def CatInside(img):
 
 def RemoveSmall(img):
 	#TODO remove small pieces of shadow and non-shadow places
-	return
+	THRESHOLD = 1000
+	SHADOW = 255
+	NOTSHADOW = 0
+	FourNear = [[0,1],[0,-1],[1,0],[-1,0]]
+	done = np.zeros(img.shape, np.int32)
+	n = img.shape[0]
+	m = img.shape[1]
+	now = 1
+	for i in xrange(n):
+		for j in xrange(m):
+			if done[i][j] == 0 and img[i][j] == SHADOW:
+				l = [[i, j]]
+				done[i][j] = now
+				t = 0
+				while t < len(l):
+					for x, y in FourNear:
+						x += l[t][0]
+						y += l[t][1]
+						if x < 0 or x >= n or y < 0 or y >= m:
+							continue
+						if img[x][y] != img[i][j]:
+							continue
+						if done[x][y] != 0:
+							continue
+						l.append([x, y])
+						done[x][y] = now
+					t += 1
+				if len(l) < THRESHOLD:
+					for x, y in l:
+						img[x][y] = NOTSHADOW
+			now += 1
+	done[done != 0] = 0
+	now = 1
+	for i in xrange(n):
+		for j in xrange(m):
+			if done[i][j] == 0 and img[i][j] == NOTSHADOW:
+				l = [[i, j]]
+				done[i][j] = now
+				t = 0
+				while t < len(l):
+					for x, y in FourNear:
+						x += l[t][0]
+						y += l[t][1]
+						if x < 0 or x >= n or y < 0 or y >= m:
+							continue
+						if img[x][y] != img[i][j]:
+							continue
+						if done[x][y] != 0:
+							continue
+						l.append([x, y])
+						done[x][y] = now
+					t += 1
+				if len(l) < THRESHOLD:
+					for x, y in l:
+						img[x][y] = SHADOW
+			now += 1
 
 def ShadowDetect(img):
 	shadowres, shadowmeans, nsmeans = BlockShadowDetect(img)
@@ -261,7 +316,7 @@ def ShadowDetect(img):
 			#raw_input()
 	#img[shadowres != 0] = [255, 255, 255]
 	#img[shadowres == 255] = [255, 0, 0]
-	CatInside(shadowres)
+	#RemoveSmall(shadowres)
 	return shadowres
 
 if __name__ == '__main__':
