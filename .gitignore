@@ -2,5 +2,6 @@
 /data/*
 *.png
 *.jpg
-data.tar
+*.tar
 ~$*
+!/src/阴影去除效果对比图片

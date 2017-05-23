@@ -73,7 +73,7 @@ def RemoveOneShadow(originalpng, shadowlist, illustd, illumean, thickness = 1000
 			RemoveShadowStrip(originalpng, striplist[nowstrip], illustd, illumean)
 			nowstrip += thickness
 	else:
-		MINLENGTH = 2000000
+		MINLENGTH = 200000
 		SEGMENTS = 3
 		for nowstrip in striplist:
 			maxlength = max(MINLENGTH, len(nowstrip) / SEGMENTS)

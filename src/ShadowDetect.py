@@ -82,9 +82,14 @@ def BlockShadowDetect(img):
 		while j < img.shape[1]:
 			if j + COLUMN >= img.shape[1]:
 				break
+			#savename = './temp/' + str(i) + '-' + str(j) + '-'
+			#print i, j, savename
+			#cv2.imwrite(savename + 'color.png', img[i:i + ROW, j:j + COLUMN])
 			now = gray[i:i + ROW, j:j + COLUMN].astype('float32')
+			#cv2.imwrite(savename + 'gray.png', now)
 			ker = np.ones((5, 5))
 			nowres = cv2.filter2D(now, -1, ker) / 25
+			#cv2.imwrite(savename + 'gauss.png', nowres)
 			#print i, j, np.std(nowres), STDLINE * (max(nowres.flat) - min(nowres.flat))
 			if np.std(nowres) > STDLINE * (max(nowres.flat) - min(nowres.flat)) and max(nowres.flat) - min(nowres.flat) > ABS:
 				now = marker[i:i + ROW, j:j + COLUMN]
@@ -94,7 +99,9 @@ def BlockShadowDetect(img):
 			j += COLUMN
 		j = 0
 		i += ROW
-	
+	#img2 = copy.deepcopy(img)
+	#img2[marker != 0] = (255, 0, 0)
+	#cv2.imwrite('./temp/chooseblock.png', img2)
 	now = 1
 	while now in marker:
 		nowlist = img[marker == now]
@@ -282,6 +289,9 @@ def RemoveSmall(img):
 
 def ShadowDetect(img):
 	shadowres, shadowmeans, nsmeans = BlockShadowDetect(img)
+	#img2 = copy.deepcopy(img)
+	#img2[shadowres != 0] = (255, 0, 0)
+	#cv2.imwrite('./temp/magic.png', img2)
 	tmpmeans = np.mean(np.array([x for x in shadowmeans if x is not None]))
 	if tmpmeans is None:
 		return None
@@ -290,7 +300,8 @@ def ShadowDetect(img):
 		if shadowmeans[j] is not None and np.mean(shadowmeans[j]) > tmpmeans:
 			#print j
 			shadowres[shadowres == j] = 255
-	floodfillmask = np.zeros((img.shape[0] + 2) * (img.shape[1] + 2)).reshape((img.shape[0] + 2, img.shape[1] + 2)).astype('uint8')
+	#img2[shadowres == 255] = (0, 0, 255)
+	#cv2.imwrite('./temp/threshold.png', img2)
 	ONEDIFF = 15
 	FLOODDIFF = (ONEDIFF, ONEDIFF, ONEDIFF)
 	nsmean = np.mean(np.array([x for x in nsmeans if x is not None]), axis = 0)
@@ -316,7 +327,13 @@ def ShadowDetect(img):
 			#raw_input()
 	#img[shadowres != 0] = [255, 255, 255]
 	#img[shadowres == 255] = [255, 0, 0]
+	#img2 = copy.deepcopy(img)
+	#img2[shadowres == 255] = (255, 0, 0)
+	#cv2.imwrite('./temp/floodfill.png', img2)
 	RemoveSmall(shadowres)
+	#img2 = copy.deepcopy(img)
+	#img2[shadowres == 255] = (255, 0, 0)
+	#cv2.imwrite('./temp/removesmall.png', img2)
 	#CatInside(shadowres)
 	return shadowres
 
@@ -327,6 +344,7 @@ if __name__ == '__main__':
 	filename = [re.sub(r'\.jpg', '', x) for x in os.listdir('../data/' + testdataset + '/original')]
 	#print filename
 	for T in xrange(0, len(filename)):
+		filename[T] = 'lssd269'
 		img = cv2.imread('../data/' + testdataset + '/original/' + filename[T] + '.jpg')
 		cv2.imwrite('ori.png', img)
 		shadowres = ShadowDetect(img)
@@ -337,3 +355,4 @@ if __name__ == '__main__':
 		cv2.imwrite('./detectresults/' + str(T) + ' - ' + filename[T] + '.png', img)
 		print 'done', T
 		#raw_input()
+		exit(0)
